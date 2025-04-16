@@ -330,17 +330,77 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Aplicación inicializada');
             
-            // Primero cargar los documentos existentes
-            loadDocuments();
-            
-            // Luego configurar los event listeners
-            setupEventListeners();
-            
-            console.log('Verificando documentos guardados...');
-            const docs = getDocumentsFromStorage();
-            const count = Object.keys(docs).length;
-            console.log(`Se encontraron ${count} documentos guardados previamente`);
+            // Primero configurar la base de datos IndexedDB
+            initIndexedDB().then(() => {
+                console.log('IndexedDB inicializada correctamente');
+                
+                // Cargar documentos guardados
+                loadDocuments();
+                
+                // Configurar event listeners
+                setupEventListeners();
+            }).catch(error => {
+                console.error('Error al inicializar IndexedDB:', error);
+                alert('Error al inicializar la base de datos. Algunas funciones pueden no estar disponibles.');
+                
+                // Configurar event listeners de todos modos
+                setupEventListeners();
+            });
         });
+        
+        // Configurar IndexedDB
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                // Abrir o crear la base de datos
+                const request = indexedDB.open('DocumentsDatabase', 1);
+                
+                // Se ejecuta si la base de datos necesita ser creada o actualizada
+                request.onupgradeneeded = function(event) {
+                    const db = event.target.result;
+                    
+                    // Crear un object store para los documentos si no existe
+                    if (!db.objectStoreNames.contains('documents')) {
+                        const objectStore = db.createObjectStore('documents', { keyPath: 'id' });
+                        objectStore.createIndex('name', 'name', { unique: false });
+                        objectStore.createIndex('date', 'date', { unique: false });
+                        console.log('Object store "documents" creado');
+                    }
+                    
+                    // Crear un object store para los archivos si no existe
+                    if (!db.objectStoreNames.contains('files')) {
+                        db.createObjectStore('files', { keyPath: 'id' });
+                        console.log('Object store "files" creado');
+                    }
+                };
+                
+                // Se ejecuta si la base de datos se abre correctamente
+                request.onsuccess = function(event) {
+                    console.log('Base de datos abierta correctamente');
+                    resolve(event.target.result);
+                };
+                
+                // Se ejecuta si hay un error al abrir la base de datos
+                request.onerror = function(event) {
+                    console.error('Error al abrir la base de datos:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+        
+        // Función para abrir la base de datos
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('DocumentsDatabase', 1);
+                
+                request.onsuccess = function(event) {
+                    resolve(event.target.result);
+                };
+                
+                request.onerror = function(event) {
+                    reject(event.target.error);
+                };
+            });
+        }
         
         // Configurar los event listeners
         function setupEventListeners() {
@@ -403,6 +463,7 @@
             closePdfViewer.addEventListener('click', function() {
                 console.log('Botón cerrar visor PDF clickeado');
                 pdfViewer.style.display = 'none';
+                pdfFrame.src = '';
             });
         }
         
@@ -517,115 +578,175 @@
             // Mostrar el loader
             loader.style.display = 'block';
             
-            // Para esta versión simplificada, consideramos que cualquier archivo es un "documento"
-            setTimeout(function() {
-                saveDocument(currentFile, name);
-            }, 500);
+            // Guardar el documento
+            saveDocument(currentFile, name);
         }
         
-        // Función para guardar un documento
+        // Función para guardar un documento en IndexedDB
         function saveDocument(file, name) {
             console.log('Guardando documento:', name);
             
             // Generar un ID único para el documento
             const docId = 'doc_' + Date.now();
             
-            // Crear un objeto URL para el archivo
-            const fileUrl = URL.createObjectURL(file);
+            // Leer el archivo como un ArrayBuffer
+            const reader = new FileReader();
             
-            // Crear el objeto documento para almacenar
-            const document = {
-                id: docId,
-                name: name,
-                url: fileUrl,
-                type: file.type,
-                size: file.size,
-                date: new Date().toISOString()
+            reader.onload = function(e) {
+                const fileData = e.target.result;
+                
+                // Crear el objeto documento para almacenar
+                const documentMetadata = {
+                    id: docId,
+                    name: name,
+                    type: file.type,
+                    size: file.size,
+                    date: new Date().toISOString()
+                };
+                
+                // Guardar en IndexedDB
+                openDatabase().then(db => {
+                    // Guardar los metadatos del documento
+                    const metadataTransaction = db.transaction(['documents'], 'readwrite');
+                    const metadataStore = metadataTransaction.objectStore('documents');
+                    metadataStore.add(documentMetadata);
+                    
+                    // Guardar el archivo
+                    const fileTransaction = db.transaction(['files'], 'readwrite');
+                    const fileStore = fileTransaction.objectStore('files');
+                    fileStore.add({
+                        id: docId,
+                        data: fileData
+                    });
+                    
+                    metadataTransaction.oncomplete = function() {
+                        fileTransaction.oncomplete = function() {
+                            console.log('Documento guardado correctamente en IndexedDB');
+                            
+                            // Recargar la lista de documentos
+                            loadDocuments();
+                            
+                            // Resetear la interfaz
+                            previewContainer.style.display = 'none';
+                            imagePreview.src = '';
+                            documentName.value = '';
+                            currentFile = null;
+                            
+                            // Ocultar el loader
+                            loader.style.display = 'none';
+                            
+                            // Mostrar mensaje de éxito
+                            alert('Documento guardado correctamente');
+                        };
+                        
+                        fileTransaction.onerror = function(event) {
+                            console.error('Error al guardar el archivo:', event.target.error);
+                            loader.style.display = 'none';
+                            alert('Error al guardar el archivo: ' + event.target.error);
+                        };
+                    };
+                    
+                    metadataTransaction.onerror = function(event) {
+                        console.error('Error al guardar los metadatos:', event.target.error);
+                        loader.style.display = 'none';
+                        alert('Error al guardar los metadatos: ' + event.target.error);
+                    };
+                }).catch(error => {
+                    console.error('Error al abrir la base de datos:', error);
+                    loader.style.display = 'none';
+                    alert('Error al acceder a la base de datos: ' + error);
+                });
             };
             
-            // Guardar en localStorage
-            const documents = getDocumentsFromStorage();
-            documents[docId] = document;
-            localStorage.setItem('pdf_documents', JSON.stringify(documents));
+            reader.onerror = function(error) {
+                console.error('Error al leer el archivo:', error);
+                loader.style.display = 'none';
+                alert('Error al leer el archivo: ' + error);
+            };
             
-            // Recargar la lista de documentos
-            loadDocuments();
-            
-            // Resetear la interfaz
-            previewContainer.style.display = 'none';
-            imagePreview.src = '';
-            documentName.value = '';
-            currentFile = null;
-            
-            // Ocultar el loader
-            loader.style.display = 'none';
-            
-            // Mostrar mensaje de éxito
-            alert('Documento guardado correctamente');
+            reader.readAsArrayBuffer(file);
         }
         
-        // Función para obtener documentos del localStorage
-        function getDocumentsFromStorage() {
-            const docs = localStorage.getItem('pdf_documents');
-            return docs ? JSON.parse(docs) : {};
-        }
-        
-        // Función para cargar los documentos en la interfaz
+        // Función para cargar los documentos de IndexedDB
         function loadDocuments() {
-            console.log('Cargando documentos');
+            console.log('Cargando documentos de IndexedDB');
             
-            const documents = getDocumentsFromStorage();
-            const docIds = Object.keys(documents);
-            
-            // Limpiar el contenedor
-            documentsContainer.innerHTML = '';
-            
-            // Si no hay documentos, mostrar mensaje vacío
-            if (docIds.length === 0) {
+            openDatabase().then(db => {
+                const transaction = db.transaction(['documents'], 'readonly');
+                const objectStore = transaction.objectStore('documents');
+                const index = objectStore.index('date');
+                
+                // Obtener todos los documentos ordenados por fecha (descendente)
+                const request = index.openCursor(null, 'prev');
+                
+                // Limpiar el contenedor
+                documentsContainer.innerHTML = '';
+                let documentsFound = false;
+                
+                request.onsuccess = function(event) {
+                    const cursor = event.target.result;
+                    
+                    if (cursor) {
+                        documentsFound = true;
+                        const doc = cursor.value;
+                        
+                        const docItem = document.createElement('div');
+                        docItem.className = 'document-item';
+                        
+                        const date = new Date(doc.date);
+                        const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+                        const formattedSize = formatFileSize(doc.size);
+                        
+                        docItem.innerHTML = `
+                            <div class="document-info">
+                                <h3 class="document-title">${doc.name}</h3>
+                                <div class="document-meta">
+                                    Fecha: ${formattedDate} | Tamaño: ${formattedSize}
+                                </div>
+                            </div>
+                            <div class="document-actions">
+                                <button class="view-doc" data-id="${doc.id}">Ver</button>
+                                <button class="download-doc success" data-id="${doc.id}">Descargar</button>
+                                <button class="delete-doc danger" data-id="${doc.id}">Eliminar</button>
+                            </div>
+                        `;
+                        
+                        documentsContainer.appendChild(docItem);
+                        
+                        cursor.continue();
+                    } else {
+                        if (!documentsFound) {
+                            documentsContainer.innerHTML = `
+                                <div class="empty-state">
+                                    <h3>No hay documentos</h3>
+                                    <p>Sube una imagen o archivo PDF para empezar.</p>
+                                </div>
+                            `;
+                        } else {
+                            // Configurar los botones de documento una vez que se hayan cargado todos
+                            setupDocumentButtons();
+                        }
+                    }
+                };
+                
+                request.onerror = function(event) {
+                    console.error('Error al cargar documentos:', event.target.error);
+                    documentsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <h3>Error al cargar documentos</h3>
+                            <p>No se pudieron cargar los documentos: ${event.target.error}</p>
+                        </div>
+                    `;
+                };
+            }).catch(error => {
+                console.error('Error al abrir la base de datos:', error);
                 documentsContainer.innerHTML = `
                     <div class="empty-state">
-                        <h3>No hay documentos</h3>
-                        <p>Sube una imagen o archivo PDF para empezar.</p>
+                        <h3>Error al acceder a la base de datos</h3>
+                        <p>${error}</p>
                     </div>
                 `;
-                return;
-            }
-            
-            // Ordenar documentos por fecha (más reciente primero)
-            docIds.sort(function(a, b) {
-                return new Date(documents[b].date) - new Date(documents[a].date);
             });
-            
-            // Crear elementos para cada documento
-            docIds.forEach(function(id) {
-                const doc = documents[id];
-                
-                const docItem = document.createElement('div');
-                docItem.className = 'document-item';
-                
-                const date = new Date(doc.date);
-                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-                const formattedSize = formatFileSize(doc.size);
-                
-                docItem.innerHTML = `
-                    <div class="document-info">
-                        <h3 class="document-title">${doc.name}</h3>
-                        <div class="document-meta">
-                            Fecha: ${formattedDate} | Tamaño: ${formattedSize}
-                        </div>
-                    </div>
-                    <div class="document-actions">
-                        <button class="view-doc" data-id="${doc.id}">Ver</button>
-                        <button class="download-doc success" data-id="${doc.id}">Descargar</button>
-                        <button class="delete-doc danger" data-id="${doc.id}">Eliminar</button>
-                    </div>
-                `;
-                
-                documentsContainer.appendChild(docItem);
-            });
-            
-            // Añadir event listeners a los botones de documento
-            setupDocumentButtons();
         }
         
         // Función para configurar los botones de documento
@@ -662,36 +783,157 @@
         
         // Función para ver un documento
         function viewDocument(docId) {
-            const documents = getDocumentsFromStorage();
-            const doc = documents[docId];
+            console.log('Visualizando documento:', docId);
             
-            if (!doc) {
-                alert('No se pudo encontrar el documento');
-                return;
-            }
+            // Mostrar el loader
+            loader.style.display = 'block';
             
-            pdfFrame.src = doc.url;
-            pdfViewer.style.display = 'block';
+            openDatabase().then(db => {
+                // Primero obtener los metadatos
+                const metadataTransaction = db.transaction(['documents'], 'readonly');
+                const metadataStore = metadataTransaction.objectStore('documents');
+                const metadataRequest = metadataStore.get(docId);
+                
+                metadataRequest.onsuccess = function(event) {
+                    const docMetadata = event.target.result;
+                    
+                    if (!docMetadata) {
+                        loader.style.display = 'none';
+                        alert('No se encontró el documento');
+                        return;
+                    }
+                    
+                    // Luego obtener el archivo
+                    const fileTransaction = db.transaction(['files'], 'readonly');
+                    const fileStore = fileTransaction.objectStore('files');
+                    const fileRequest = fileStore.get(docId);
+                    
+                    fileRequest.onsuccess = function(event) {
+                        const fileData = event.target.result;
+                        
+                        if (!fileData) {
+                            loader.style.display = 'none';
+                            alert('No se encontró el archivo del documento');
+                            return;
+                        }
+                        
+                        // Crear un blob con los datos del archivo
+                        const blob = new Blob([fileData.data], { type: docMetadata.type });
+                        const url = URL.createObjectURL(blob);
+                        
+                        // Mostrar en el visor de PDF
+                        pdfFrame.src = url;
+                        pdfViewer.style.display = 'block';
+                        
+                        // Ocultar el loader
+                        loader.style.display = 'none';
+                        
+                        // Limpiar la URL cuando se cierre el visor
+                        closePdfViewer.addEventListener('click', function() {
+                            URL.revokeObjectURL(url);
+                        }, { once: true });
+                    };
+                    
+                    fileRequest.onerror = function(event) {
+                        console.error('Error al obtener el archivo:', event.target.error);
+                        loader.style.display = 'none';
+                        alert('Error al obtener el archivo: ' + event.target.error);
+                    };
+                };
+                
+                metadataRequest.onerror = function(event) {
+                    console.error('Error al obtener los metadatos:', event.target.error);
+                    loader.style.display = 'none';
+                    alert('Error al obtener los metadatos: ' + event.target.error);
+                };
+            }).catch(error => {
+                console.error('Error al abrir la base de datos:', error);
+                loader.style.display = 'none';
+                alert('Error al acceder a la base de datos: ' + error);
+            });
         }
         
         // Función para descargar un documento
         function downloadDocument(docId) {
-            const documents = getDocumentsFromStorage();
-            const doc = documents[docId];
+            console.log('Descargando documento:', docId);
             
-            if (!doc) {
-                alert('No se pudo encontrar el documento');
-                return;
-            }
+            // Mostrar el loader
+            loader.style.display = 'block';
             
-            const extension = doc.type === 'application/pdf' ? '.pdf' : '.jpg';
-            
-            const a = document.createElement('a');
-            a.href = doc.url;
-            a.download = doc.name + extension;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            openDatabase().then(db => {
+                // Primero obtener los metadatos
+                const metadataTransaction = db.transaction(['documents'], 'readonly');
+                const metadataStore = metadataTransaction.objectStore('documents');
+                const metadataRequest = metadataStore.get(docId);
+                
+                metadataRequest.onsuccess = function(event) {
+                    const docMetadata = event.target.result;
+                    
+                    if (!docMetadata) {
+                        loader.style.display = 'none';
+                        alert('No se encontró el documento');
+                        return;
+                    }
+                    
+                    // Luego obtener el archivo
+                    const fileTransaction = db.transaction(['files'], 'readonly');
+                    const fileStore = fileTransaction.objectStore('files');
+                    const fileRequest = fileStore.get(docId);
+                    
+                    fileRequest.onsuccess = function(event) {
+                        const fileData = event.target.result;
+                        
+                        if (!fileData) {
+                            loader.style.display = 'none';
+                            alert('No se encontró el archivo del documento');
+                            return;
+                        }
+                        
+                        // Crear un blob con los datos del archivo
+                        const blob = new Blob([fileData.data], { type: docMetadata.type });
+                        const url = URL.createObjectURL(blob);
+                        
+                        // Crear un enlace para la descarga
+                        const a = document.createElement('a');
+                        a.href = url;
+                        
+                        // Determinar la extensión según el tipo de archivo
+                        let extension = '.pdf';
+                        if (docMetadata.type.startsWith('image/')) {
+                            extension = docMetadata.type === 'image/png' ? '.png' : '.jpg';
+                        }
+                        
+                        a.download = docMetadata.name + extension;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        
+                        // Limpiar la URL después de un tiempo
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                        }, 100);
+                        
+                        // Ocultar el loader
+                        loader.style.display = 'none';
+                    };
+                    
+                    fileRequest.onerror = function(event) {
+                        console.error('Error al obtener el archivo:', event.target.error);
+                        loader.style.display = 'none';
+                        alert('Error al obtener el archivo: ' + event.target.error);
+                    };
+                };
+                
+                metadataRequest.onerror = function(event) {
+                    console.error('Error al obtener los metadatos:', event.target.error);
+                    loader.style.display = 'none';
+                    alert('Error al obtener los metadatos: ' + event.target.error);
+                };
+            }).catch(error => {
+                console.error('Error al abrir la base de datos:', error);
+                loader.style.display = 'none';
+                alert('Error al acceder a la base de datos: ' + error);
+            });
         }
         
         // Función para eliminar un documento
@@ -700,24 +942,58 @@
                 return;
             }
             
-            const documents = getDocumentsFromStorage();
+            console.log('Eliminando documento:', docId);
             
-            if (!documents[docId]) {
-                alert('No se pudo encontrar el documento');
-                return;
-            }
+            // Mostrar el loader
+            loader.style.display = 'block';
             
-            // Liberar URL
-            URL.revokeObjectURL(documents[docId].url);
-            
-            // Eliminar del almacenamiento
-            delete documents[docId];
-            localStorage.setItem('pdf_documents', JSON.stringify(documents));
-            
-            // Actualizar la interfaz
-            loadDocuments();
-            
-            alert('Documento eliminado correctamente');
+            openDatabase().then(db => {
+                // Eliminar los metadatos
+                const metadataTransaction = db.transaction(['documents'], 'readwrite');
+                const metadataStore = metadataTransaction.objectStore('documents');
+                const metadataRequest = metadataStore.delete(docId);
+                
+                // Eliminar el archivo
+                const fileTransaction = db.transaction(['files'], 'readwrite');
+                const fileStore = fileTransaction.objectStore('files');
+                const fileRequest = fileStore.delete(docId);
+                
+                metadataRequest.onsuccess = function() {
+                    console.log('Metadatos eliminados correctamente');
+                };
+                
+                fileRequest.onsuccess = function() {
+                    console.log('Archivo eliminado correctamente');
+                };
+                
+                metadataTransaction.oncomplete = function() {
+                    fileTransaction.oncomplete = function() {
+                        console.log('Documento eliminado completamente');
+                        // Recargar los documentos
+                        loadDocuments();
+                        // Ocultar el loader
+                        loader.style.display = 'none';
+                        // Mostrar mensaje de éxito
+                        alert('Documento eliminado correctamente');
+                    };
+                };
+                
+                metadataTransaction.onerror = function(event) {
+                    console.error('Error al eliminar los metadatos:', event.target.error);
+                    loader.style.display = 'none';
+                    alert('Error al eliminar los metadatos: ' + event.target.error);
+                };
+                
+                fileTransaction.onerror = function(event) {
+                    console.error('Error al eliminar el archivo:', event.target.error);
+                    loader.style.display = 'none';
+                    alert('Error al eliminar el archivo: ' + event.target.error);
+                };
+            }).catch(error => {
+                console.error('Error al abrir la base de datos:', error);
+                loader.style.display = 'none';
+                alert('Error al acceder a la base de datos: ' + error);
+            });
         }
         
         // Función para formatear el tamaño de archivo
