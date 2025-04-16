@@ -329,8 +329,17 @@
         // Inicializar la aplicación
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Aplicación inicializada');
-            setupEventListeners();
+            
+            // Primero cargar los documentos existentes
             loadDocuments();
+            
+            // Luego configurar los event listeners
+            setupEventListeners();
+            
+            console.log('Verificando documentos guardados...');
+            const docs = getDocumentsFromStorage();
+            const count = Object.keys(docs).length;
+            console.log(`Se encontraron ${count} documentos guardados previamente`);
         });
         
         // Configurar los event listeners
