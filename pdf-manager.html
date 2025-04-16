@@ -5,318 +5,210 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Documentos PDF</title>
     <style>
-        /* Variables de colores */
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #2ecc71;
-            --danger-color: #e74c3c;
-            --dark-color: #2c3e50;
-            --light-color: #ecf0f1;
-        }
-        
-        /* Estilos generales */
+        /* Estilos básicos */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f8f9fa;
+            background-color: #f5f5f5;
         }
         
         header {
-            background-color: var(--dark-color);
+            background-color: #2c3e50;
             color: white;
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-        }
-        
-        header h1 {
-            margin: 0;
-            font-size: 1.5rem;
-        }
-        
-        .header-icon {
-            margin-right: 10px;
-            font-size: 1.5rem;
+            padding: 15px;
+            text-align: center;
         }
         
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
+            max-width: 800px;
+            margin: 20px auto;
             padding: 20px;
         }
         
-        /* Estilos para el área de carga */
+        /* Área de carga */
         .upload-area {
             border: 2px dashed #ccc;
-            border-radius: 10px;
-            padding: 2rem;
+            border-radius: 5px;
+            padding: 30px;
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 30px;
             background-color: white;
+        }
+        
+        /* Botones */
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.3s ease;
         }
         
-        .upload-area:hover {
-            border-color: var(--primary-color);
-            background-color: #f0f7ff;
-        }
-        
-        .upload-icon {
-            font-size: 3rem;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-        }
-        
-        /* Estilos para botones */
-        .btn {
-            display: inline-block;
-            font-weight: 400;
-            text-align: center;
-            vertical-align: middle;
-            cursor: pointer;
-            border: 1px solid transparent;
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            line-height: 1.5;
-            border-radius: 0.25rem;
-            transition: all 0.15s ease-in-out;
-            text-decoration: none;
-            margin: 0.25rem;
-        }
-        
-        .btn-primary {
-            color: #fff;
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        
-        .btn-primary:hover {
+        button:hover {
             background-color: #2980b9;
         }
         
-        .btn-success {
-            color: #fff;
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
+        button.success {
+            background-color: #2ecc71;
         }
         
-        .btn-success:hover {
+        button.success:hover {
             background-color: #27ae60;
         }
         
-        .btn-danger {
-            color: #fff;
-            background-color: var(--danger-color);
-            border-color: var(--danger-color);
+        button.danger {
+            background-color: #e74c3c;
         }
         
-        .btn-danger:hover {
+        button.danger:hover {
             background-color: #c0392b;
         }
         
-        /* Estilos para la vista previa de la imagen */
+        /* Área de vista previa */
         .preview-container {
             display: none;
-            margin: 1rem 0;
-            padding: 1.5rem;
+            padding: 20px;
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .image-preview {
+        .preview-image {
             max-width: 100%;
             max-height: 300px;
             display: block;
-            margin: 0 auto 1.5rem;
+            margin: 0 auto 20px;
             border-radius: 5px;
         }
         
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-        }
-        
-        .form-control {
-            display: block;
+        /* Formularios */
+        input[type="text"] {
             width: 100%;
-            padding: 0.5rem;
-            font-size: 1rem;
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
             box-sizing: border-box;
         }
         
-        /* Estilos para la galería de documentos */
-        .documents-section {
-            margin-top: 2rem;
+        label {
+            font-weight: bold;
         }
         
-        .documents-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .document-card {
+        /* Lista de documentos */
+        .documents-list {
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            transition: transform 0.3s ease;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .document-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .document-icon {
-            height: 150px;
+        .document-item {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            background-color: #f8f9fa;
-            color: var(--primary-color);
-            font-size: 3rem;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .document-item:last-child {
+            border-bottom: none;
         }
         
         .document-info {
-            padding: 1rem;
+            flex: 1;
         }
         
         .document-title {
-            margin: 0 0 0.5rem;
-            font-size: 1rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: bold;
+            margin: 0 0 5px;
         }
         
         .document-meta {
-            font-size: 0.8rem;
-            color: #6c757d;
-            margin-bottom: 1rem;
+            font-size: 0.8em;
+            color: #777;
         }
         
         .document-actions {
             display: flex;
-            justify-content: space-between;
         }
         
-        /* Estilos para el visor de PDF */
-        .pdf-viewer {
+        /* Modal para visualización de PDF */
+        .modal {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(0,0,0,0.8);
             z-index: 1000;
         }
         
-        .pdf-viewer iframe {
+        .modal-content {
+            width: 90%;
+            height: 90%;
+            margin: 5% auto;
+            background-color: white;
+            position: relative;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
         
-        .close-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            z-index: 1001;
+        /* Estado vacío */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #777;
         }
         
-        /* Estilos para la cámara */
-        .camera-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-            z-index: 1000;
-        }
-        
-        .camera-preview {
-            width: 100%;
-            height: calc(100% - 70px);
-            object-fit: contain;
-        }
-        
-        .camera-buttons {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-        }
-        
-        /* Estilos para el loader */
-        .loader-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-        }
-        
+        /* Animación de carga */
         .loader {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-color);
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+        
+        .loader:after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            margin: -20px 0 0 -20px;
             border-radius: 50%;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
             animation: spin 1s linear infinite;
         }
         
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-        
-        /* Estilos para mensajes vacíos */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #6c757d;
-        }
-        
-        .empty-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            color: #ced4da;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .documents-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-            
-            .document-icon {
-                height: 120px;
-            }
         }
         
         /* Utilidades */
@@ -328,115 +220,87 @@
             text-align: center;
         }
         
-        .mt-4 {
-            margin-top: 1.5rem;
-        }
-        
-        .mb-2 {
-            margin-bottom: 0.5rem;
-        }
-        
-        .d-flex {
-            display: flex;
-        }
-        
-        .justify-content-center {
-            justify-content: center;
-        }
-        
-        .flex-column {
-            flex-direction: column;
-        }
-        
-        .align-items-center {
-            align-items: center;
-        }
-        
-        .w-100 {
-            width: 100%;
-        }
-        
-        /* Animaciones */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease;
+        /* Responsive */
+        @media (max-width: 600px) {
+            .document-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .document-actions {
+                margin-top: 10px;
+                align-self: flex-end;
+            }
+            
+            button {
+                padding: 8px 12px;
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Cabecera -->
     <header>
-        <div class="header-icon">📄</div>
         <h1>Gestor de Documentos PDF</h1>
     </header>
     
-    <!-- Contenido principal -->
     <div class="container">
-        <!-- Área de subida de archivos -->
+        <!-- Área de carga de archivos -->
         <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📤</div>
-            <h3>Subir imagen o archivo PDF</h3>
-            <p>Arrastra y suelta archivos aquí o haz clic para seleccionar</p>
+            <h2>Subir imagen o archivo PDF</h2>
+            <p>Arrastra y suelta archivos aquí o utiliza los botones a continuación</p>
             <div>
-                <button class="btn btn-primary" id="selectFileBtn">
-                    📁 Seleccionar archivo
-                </button>
-                <button class="btn btn-success" id="takePhotoBtn">
-                    📷 Tomar foto
-                </button>
+                <button id="selectFileBtn">Seleccionar archivo</button>
+                <button id="takePhotoBtn" class="success">Tomar foto</button>
             </div>
             <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
         </div>
         
-        <!-- Vista previa de imagen -->
+        <!-- Área de vista previa -->
         <div class="preview-container" id="previewContainer">
-            <h3 class="text-center">Vista previa</h3>
-            <img id="imagePreview" class="image-preview" alt="Vista previa">
+            <h2 class="text-center">Vista previa</h2>
+            <img id="imagePreview" class="preview-image" alt="Vista previa">
             
-            <div class="form-group">
-                <label for="documentName">Nombre del documento</label>
-                <input type="text" class="form-control" id="documentName" placeholder="Nombre del documento">
+            <div>
+                <label for="documentName">Nombre del documento:</label>
+                <input type="text" id="documentName" placeholder="Nombre del documento">
             </div>
             
-            <div class="text-center mt-4">
-                <button class="btn btn-primary" id="createPdfBtn">
-                    📄 Crear PDF
-                </button>
+            <div class="text-center" style="margin-top: 20px;">
+                <button id="createPdfBtn">Crear PDF</button>
             </div>
         </div>
         
-        <!-- Documentos guardados -->
+        <!-- Lista de documentos -->
         <div class="documents-section">
             <h2>Mis documentos</h2>
-            <div id="documentsContainer">
+            <div id="documentsContainer" class="documents-list">
                 <!-- Contenido generado dinámicamente -->
             </div>
         </div>
     </div>
     
-    <!-- Visor de PDF -->
-    <div class="pdf-viewer" id="pdfViewer">
-        <div class="close-button" id="closePdfViewer">✕</div>
-        <iframe id="pdfFrame"></iframe>
+    <!-- Modal para visualizar PDF -->
+    <div class="modal" id="pdfViewer">
+        <span class="close-button" id="closePdfViewer">&times;</span>
+        <div class="modal-content">
+            <iframe id="pdfFrame"></iframe>
+        </div>
     </div>
     
-    <!-- Contenedor de la cámara -->
-    <div class="camera-container" id="cameraContainer">
-        <video id="cameraPreview" class="camera-preview" autoplay playsinline></video>
-        <div class="camera-buttons">
-            <button class="btn btn-danger" id="closeCameraBtn">❌ Cancelar</button>
-            <button class="btn btn-primary" id="capturePhotoBtn">📸 Capturar</button>
+    <!-- Modal para la cámara -->
+    <div class="modal" id="cameraContainer">
+        <span class="close-button" id="closeCameraBtn">&times;</span>
+        <div class="modal-content" style="background-color: black;">
+            <video id="cameraPreview" style="width: 100%; height: 100%; object-fit: contain;" autoplay playsinline></video>
+            <div style="position: absolute; bottom: 20px; left: 0; width: 100%; text-align: center;">
+                <button id="capturePhotoBtn" class="success">Capturar foto</button>
+            </div>
         </div>
     </div>
     
     <!-- Loader -->
-    <div class="loader-container" id="loaderContainer">
-        <div class="loader"></div>
-    </div>
+    <div class="loader" id="loader"></div>
     
     <script>
         // Elementos del DOM
@@ -456,42 +320,47 @@
         const cameraPreview = document.getElementById('cameraPreview');
         const capturePhotoBtn = document.getElementById('capturePhotoBtn');
         const closeCameraBtn = document.getElementById('closeCameraBtn');
-        const loaderContainer = document.getElementById('loaderContainer');
+        const loader = document.getElementById('loader');
         
         // Variables globales
         let currentFile = null;
         let cameraStream = null;
         
-        // Event Listeners
+        // Inicializar la aplicación
         document.addEventListener('DOMContentLoaded', function() {
-            loadDocuments();
+            console.log('Aplicación inicializada');
             setupEventListeners();
+            loadDocuments();
         });
         
+        // Configurar los event listeners
         function setupEventListeners() {
-            // Evento para seleccionar archivo
+            console.log('Configurando event listeners');
+            
+            // Event listener para seleccionar archivo
             selectFileBtn.addEventListener('click', function() {
+                console.log('Botón seleccionar archivo clickeado');
                 fileInput.click();
             });
             
-            fileInput.addEventListener('change', handleFileSelection);
+            fileInput.addEventListener('change', function(e) {
+                console.log('Archivo seleccionado');
+                handleFileSelection(e);
+            });
             
-            // Eventos de arrastrar y soltar
+            // Event listener para arrastrar y soltar
             uploadArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
-                uploadArea.style.borderColor = 'var(--primary-color)';
-                uploadArea.style.backgroundColor = '#f0f7ff';
+                uploadArea.style.borderColor = '#3498db';
             });
             
             uploadArea.addEventListener('dragleave', function() {
                 uploadArea.style.borderColor = '#ccc';
-                uploadArea.style.backgroundColor = 'white';
             });
             
             uploadArea.addEventListener('drop', function(e) {
                 e.preventDefault();
                 uploadArea.style.borderColor = '#ccc';
-                uploadArea.style.backgroundColor = 'white';
                 
                 if (e.dataTransfer.files.length) {
                     fileInput.files = e.dataTransfer.files;
@@ -499,18 +368,32 @@
                 }
             });
             
-            // Evento para tomar foto
-            takePhotoBtn.addEventListener('click', openCamera);
-            capturePhotoBtn.addEventListener('click', capturePhoto);
-            closeCameraBtn.addEventListener('click', closeCamera);
+            // Event listener para tomar foto
+            takePhotoBtn.addEventListener('click', function() {
+                console.log('Botón tomar foto clickeado');
+                openCamera();
+            });
             
-            // Evento para crear PDF
-            createPdfBtn.addEventListener('click', createPDF);
+            capturePhotoBtn.addEventListener('click', function() {
+                console.log('Botón capturar foto clickeado');
+                capturePhoto();
+            });
             
-            // Evento para cerrar el visor de PDF
+            closeCameraBtn.addEventListener('click', function() {
+                console.log('Botón cerrar cámara clickeado');
+                closeCamera();
+            });
+            
+            // Event listener para crear PDF
+            createPdfBtn.addEventListener('click', function() {
+                console.log('Botón crear PDF clickeado');
+                createPDF();
+            });
+            
+            // Event listener para cerrar visor de PDF
             closePdfViewer.addEventListener('click', function() {
+                console.log('Botón cerrar visor PDF clickeado');
                 pdfViewer.style.display = 'none';
-                pdfFrame.src = '';
             });
         }
         
@@ -519,11 +402,13 @@
             const file = e.target.files[0];
             if (!file) return;
             
+            console.log('Archivo seleccionado:', file.name, file.type);
+            
             currentFile = file;
             
             if (file.type === 'application/pdf') {
                 // Mostrar vista previa para PDF
-                imagePreview.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjZTc0YzNjIiBkPSJNMTgxLjkgMjU2LjFjLTUtLjYtMTAuMS0uNi0xNS4yIDBsLTMwLjYgNC00Ljgg.4LTMyLjUtMi4xTDY0IDI4OHYtMTkyYzAtMTcuNyAxNC4zLTMyIDMyLTMyaDExMmM4LjUgMCAxNi43IDMuNCAxNi43IDMuNGwzNS4zIDM1LjNjMy40IDMuNCAxMi42IDEyLjYgMTIuNiAxMi42cy44LjggMi40IDIuNGMxLjYgMS42IDIuNyA2LjMgMi43IDEwLjl2MjQuNWwwIDg1LjVjMCA1LjEtLjcgMTAuMS0yLjEgMTUtMS40IDQuOS00LjUgOS4xLTguNiAxMi41LTQuMiAzLjQtOS40IDUuMy0xNC43IDUuM2gtLjVjLTUuMiAwLTEwLjItMi4yLTE0LjEtNS45LTMuOS0zLjgtNi4yLTktNi4yLTE1LjNWMjM4YzAtMTEuNCA5LjItMjAuNiAyMC42LTIwLjZoMy45djE1LjVjMCAxNi4yIDEyLjcgMjkuNSAyOC45IDMwLjNoLjFjMTUuNyAwIDI5LjEtMTMuNSAzMC4yLTI5LjFsLjEtMS4zVjIxNy4zSDI5OGMxMS40IDAgMjAuNiA5LjIgMjAuNiAyMC42VjI2MGMwIDYuMy0yLjIgMTIuNC02LjIgMTcuM3MtOS41IDcuMi0xNS4zIDctMTEuNC0yLjYtMTUuNC03LjVjLTQtNC45LTUuOC0xMS43LTUtMTguM2wxLjMtMTAuMiAyLjktMTctMTkuOS0yLjdMMjMyLjYgMjYwbC03LjEgMzVjLTEuOSA5LjMtNi40IDE3LjktMTIuOSAyNC44cy0xNC43IDExLjgtMjMuOCAxMy42LTE4LjUgMS4xLTI3LjEtMi4xLTE2LjItOS4zLTIxLjUtMTcuMmwtOC45LTEzLjEtMTcuNC0yNS41LTIzLjIgMTIuOC0yMS44IDEyTDcwIDMwNC45bDEuNCAxNS40TDc0IDMzOGMxLjEgMTEuOC0yLjggMjMuNy0xMC44IDMyLjdTNDQuMSAzODYuMSAzMiAzODZIMThjLTguNyAwLTE2LjItNi4xLTE3LjgtMTQuNi0xLjYtOC42IDMuMS0xNy4yIDExLjEtMjAuMmw5LjEtMy40IDEwLjYtNCAyNS40LTkuNSAyOS43LTExLjEtMzIuMi0xMi0yMC4yLTcuNkwyNi4xIDMwMGwtMS43LS42LTIuNC0uOS0yMS40LTggQzE2LjYgMTkgMCAwIDAgMGgzODRzLTE2LjYgMTktMzYuNyAyOC41bC0yMS40IDgtMi40LjktMS43LjYtNy43IDIuOS0yMC4yIDcuNi0zMi4yIDEyIDI5LjcgMTEuMSAyNS40IDkuNSAxMC42IDQgOS4xIDMuNCBjOCAxIDEyLjcgOS42IDExLjEgMTguMi0xLjYgOC41LTkuMSAxNS0xNy44IDE1SDMwNGMtMTIuMSAwLTIzLjgtNC43LTMxLjgtMTMuN1MyNjEuMyAzNDkuOCAyNjIuNCAzMzhsMi42LTE3LjcgMS40LTE1LjQtMjUuOS0xNC4yLTIxLjgtMTItMjMuMi0xMi44LTE3LjQgMjUuNS04LjkgMTMuMWMtNS4zIDcuOS0xMyAxNCwtMjEuNSAxNy4ycy0xOCAzLjktMjcuMSAyLjEtMTcuMy02LjctMjMuOC0xMy42LTExLTE1LjUtMTIuOS0yNC44bC03LjEtMzUtMjguNy0zLjktMTkuOS0yLjcgMi45IDE3IDEuMyAxMC4yYy44IDYuNi0xIDEzLjQtNSAxOC4zcy0xMC4xIDcuNS0xNS40IDcuNWwwIDBjLTUuNyAwLTExLjMtMi4xLTE1LjMtNi45LTQtNC45LTYuMi0xMS01LjktMTcuM2wuMy02LjRWMjM4YzAtMTEuNCA5LjItMjAuNiAyMC42LTIwLjZoMy45djE1LjVjMCAxNi4yIDEzLjEgMjkuOCAyOS40IDMwLjNoLjFjMTUuNyAwIDI4LjctMTMuNSAyOS42LTI5LjFsLjItMS4zVjIxNy4zSDg2YzExLjQgMCAyMC42IDkuMiAyMC42IDIwLjZ2MjIuNGMwIDYuMy0yLjIgMTEuNS02LjIgMTUuMy0zLjkgMy44LTguOSA1LjktMTQuMSA1LjloLS41Yy01LjMgMC0xMC41LTEuOS0xNC43LTUuMy00LjEtMy41LTcuMi03LjYtOC42LTEyLjUtMS40LTQuOS0yLjEtOS45LTIuMS0xNWwwLTg1LjVWMTI4YzAtNC43IDEuMS05LjMgMi43LTEwLjkgMS42LTEuNiAyLjQtMi40IDIuNC0yLjRzOS4yLTkuMiAxMi42LTEyLjZsMzUuMy0zNS4zUzE0Mi44IDE2IDEyOC41IDE2SDgwYzUuOSAwIDExLjUgMi40IDE1LjYgNi42QzEwMC43IDI2LjggMTcgMzIuNSA5NiAzMmgxOTJjMTcuNyAwIDMyIDE0LjMgMzIgMzJ2NjRsLTQxIDI0LjMtMjkuNSA1LjktMzQuMSA2LjgtMTkuMS0xMC41LTkuMS01LTUuMy0yLjkgNy4yLTguMiAyMi4zLTI1LjMtMjEuOC0xOS4xLTI3LjUtMjQuMS03LjgtNi45IDEwLjMgMSAxNy41IDEuNyA5LjEuOC05LjctOS43LTI1LjYtMjUuNi0zNC4yLTM0LjItNy40LTcuNC0xMy4zLTEzLjMtMTYuOC0xMy44LTMuNS0uNSA2LjIgMTEuMiAxMC43IDE5LjMgMy45IDcgMTAuNSAxOC45IDEwLjUgMTguOXMyLjgxQzE1NC4yNCA0NS44LS44IDIuOSAyLjUgNS41IDkuMSA2Ljcgbi0xMS44LTQuNEwxODEuOSAyNTYuMXoiLz48L3N2Zz4=';
+                imagePreview.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjZTc0YzNjIiBkPSJNMCAwaDM4NHY1MTJIMHoiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSI4MCIgZmlsbD0id2hpdGUiPlBERjwvdGV4dD48L3N2Zz4=';
             } else if (file.type.startsWith('image/')) {
                 // Mostrar vista previa para imagen
                 const reader = new FileReader();
@@ -538,7 +423,10 @@
             
             // Sugerir un nombre para el documento
             const fileName = file.name.split('.')[0] || 'Documento';
-            documentName.value = `${fileName}_${formatDate(new Date())}`;
+            const currentDate = new Date();
+            const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+            
+            documentName.value = `${fileName}_${formattedDate}`;
             
             // Mostrar el contenedor de vista previa
             previewContainer.style.display = 'block';
@@ -576,7 +464,10 @@
         
         // Función para capturar una foto
         function capturePhoto() {
-            if (!cameraStream) return;
+            if (!cameraStream) {
+                alert('La cámara no está activada');
+                return;
+            }
             
             const canvas = document.createElement('canvas');
             canvas.width = cameraPreview.videoWidth;
@@ -593,14 +484,16 @@
                 currentFile = new File([blob], 'camera_photo.jpg', { type: 'image/jpeg' });
                 
                 // Sugerir un nombre para el documento
-                documentName.value = `Foto_${formatDate(new Date())}`;
+                const currentDate = new Date();
+                const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+                documentName.value = `Foto_${formattedDate}`;
                 
                 // Mostrar el contenedor de vista previa
                 previewContainer.style.display = 'block';
+                
+                // Cerrar la cámara
+                closeCamera();
             }, 'image/jpeg');
-            
-            // Cerrar la cámara
-            closeCamera();
         }
         
         // Función para crear un PDF
@@ -610,28 +503,224 @@
                 return;
             }
             
-            const name = documentName.value.trim() || `Documento_${formatDate(new Date())}`;
+            const name = documentName.value.trim() || `Documento_${new Date().toLocaleDateString()}`;
             
             // Mostrar el loader
-            loaderContainer.style.display = 'flex';
+            loader.style.display = 'block';
             
-            if (currentFile.type === 'application/pdf') {
-                // Si es un PDF, guardarlo directamente
+            // Para esta versión simplificada, consideramos que cualquier archivo es un "documento"
+            setTimeout(function() {
                 saveDocument(currentFile, name);
-            } else {
-                // Si es una imagen, convertirla a PDF
-                convertImageToPdf(currentFile, name);
-            }
+            }, 500);
         }
         
-        // Función para convertir imagen a PDF (implementación básica)
-        function convertImageToPdf(imageFile, name) {
-            // En un entorno real, usaríamos jsPDF o una biblioteca similar
-            // Por ahora, usaremos un enfoque simplificado para demostración
+        // Función para guardar un documento
+        function saveDocument(file, name) {
+            console.log('Guardando documento:', name);
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                // Simular la creación de un PDF
-                setTimeout(function() {
-                    // En una implementación real, crearíamos un PDF real aquí
-                    // Para esta demostración, solo guardamos la imagen como si
+            // Generar un ID único para el documento
+            const docId = 'doc_' + Date.now();
+            
+            // Crear un objeto URL para el archivo
+            const fileUrl = URL.createObjectURL(file);
+            
+            // Crear el objeto documento para almacenar
+            const document = {
+                id: docId,
+                name: name,
+                url: fileUrl,
+                type: file.type,
+                size: file.size,
+                date: new Date().toISOString()
+            };
+            
+            // Guardar en localStorage
+            const documents = getDocumentsFromStorage();
+            documents[docId] = document;
+            localStorage.setItem('pdf_documents', JSON.stringify(documents));
+            
+            // Recargar la lista de documentos
+            loadDocuments();
+            
+            // Resetear la interfaz
+            previewContainer.style.display = 'none';
+            imagePreview.src = '';
+            documentName.value = '';
+            currentFile = null;
+            
+            // Ocultar el loader
+            loader.style.display = 'none';
+            
+            // Mostrar mensaje de éxito
+            alert('Documento guardado correctamente');
+        }
+        
+        // Función para obtener documentos del localStorage
+        function getDocumentsFromStorage() {
+            const docs = localStorage.getItem('pdf_documents');
+            return docs ? JSON.parse(docs) : {};
+        }
+        
+        // Función para cargar los documentos en la interfaz
+        function loadDocuments() {
+            console.log('Cargando documentos');
+            
+            const documents = getDocumentsFromStorage();
+            const docIds = Object.keys(documents);
+            
+            // Limpiar el contenedor
+            documentsContainer.innerHTML = '';
+            
+            // Si no hay documentos, mostrar mensaje vacío
+            if (docIds.length === 0) {
+                documentsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No hay documentos</h3>
+                        <p>Sube una imagen o archivo PDF para empezar.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Ordenar documentos por fecha (más reciente primero)
+            docIds.sort(function(a, b) {
+                return new Date(documents[b].date) - new Date(documents[a].date);
+            });
+            
+            // Crear elementos para cada documento
+            docIds.forEach(function(id) {
+                const doc = documents[id];
+                
+                const docItem = document.createElement('div');
+                docItem.className = 'document-item';
+                
+                const date = new Date(doc.date);
+                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+                const formattedSize = formatFileSize(doc.size);
+                
+                docItem.innerHTML = `
+                    <div class="document-info">
+                        <h3 class="document-title">${doc.name}</h3>
+                        <div class="document-meta">
+                            Fecha: ${formattedDate} | Tamaño: ${formattedSize}
+                        </div>
+                    </div>
+                    <div class="document-actions">
+                        <button class="view-doc" data-id="${doc.id}">Ver</button>
+                        <button class="download-doc success" data-id="${doc.id}">Descargar</button>
+                        <button class="delete-doc danger" data-id="${doc.id}">Eliminar</button>
+                    </div>
+                `;
+                
+                documentsContainer.appendChild(docItem);
+            });
+            
+            // Añadir event listeners a los botones de documento
+            setupDocumentButtons();
+        }
+        
+        // Función para configurar los botones de documento
+        function setupDocumentButtons() {
+            console.log('Configurando botones de documento');
+            
+            // Botones para ver documentos
+            document.querySelectorAll('.view-doc').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const docId = this.getAttribute('data-id');
+                    console.log('Ver documento:', docId);
+                    viewDocument(docId);
+                });
+            });
+            
+            // Botones para descargar documentos
+            document.querySelectorAll('.download-doc').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const docId = this.getAttribute('data-id');
+                    console.log('Descargar documento:', docId);
+                    downloadDocument(docId);
+                });
+            });
+            
+            // Botones para eliminar documentos
+            document.querySelectorAll('.delete-doc').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const docId = this.getAttribute('data-id');
+                    console.log('Eliminar documento:', docId);
+                    deleteDocument(docId);
+                });
+            });
+        }
+        
+        // Función para ver un documento
+        function viewDocument(docId) {
+            const documents = getDocumentsFromStorage();
+            const doc = documents[docId];
+            
+            if (!doc) {
+                alert('No se pudo encontrar el documento');
+                return;
+            }
+            
+            pdfFrame.src = doc.url;
+            pdfViewer.style.display = 'block';
+        }
+        
+        // Función para descargar un documento
+        function downloadDocument(docId) {
+            const documents = getDocumentsFromStorage();
+            const doc = documents[docId];
+            
+            if (!doc) {
+                alert('No se pudo encontrar el documento');
+                return;
+            }
+            
+            const extension = doc.type === 'application/pdf' ? '.pdf' : '.jpg';
+            
+            const a = document.createElement('a');
+            a.href = doc.url;
+            a.download = doc.name + extension;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        // Función para eliminar un documento
+        function deleteDocument(docId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+                return;
+            }
+            
+            const documents = getDocumentsFromStorage();
+            
+            if (!documents[docId]) {
+                alert('No se pudo encontrar el documento');
+                return;
+            }
+            
+            // Liberar URL
+            URL.revokeObjectURL(documents[docId].url);
+            
+            // Eliminar del almacenamiento
+            delete documents[docId];
+            localStorage.setItem('pdf_documents', JSON.stringify(documents));
+            
+            // Actualizar la interfaz
+            loadDocuments();
+            
+            alert('Documento eliminado correctamente');
+        }
+        
+        // Función para formatear el tamaño de archivo
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
