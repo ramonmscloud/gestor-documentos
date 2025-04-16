@@ -180,14 +180,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        .storage-selector {
-            margin-bottom: 20px;
-            text-align: center;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-        }
-        
         .notification {
             position: fixed;
             bottom: 20px;
@@ -212,14 +204,6 @@
     </header>
     
     <div class="container">
-        <!-- Selector de tipo de almacenamiento -->
-        <div class="storage-selector">
-            <h3>Método de almacenamiento</h3>
-            <p>Selecciona cómo quieres guardar tus documentos:</p>
-            <button id="localStorageBtn" class="success">En el navegador</button>
-            <button id="fileSystemBtn">En carpeta del sistema</button>
-        </div>
-        
         <div class="upload-area" id="uploadArea">
             <h2>Subir imagen o archivo PDF</h2>
             <p>Arrastra y suelta archivos aquí o utiliza los botones a continuación</p>
@@ -293,42 +277,24 @@
         const closeCameraBtn = document.getElementById('closeCameraBtn');
         const loader = document.getElementById('loader');
         const notification = document.getElementById('notification');
-        const localStorageBtn = document.getElementById('localStorageBtn');
-        const fileSystemBtn = document.getElementById('fileSystemBtn');
         
         // Variables globales
         let currentFile = null;
         let cameraStream = null;
-        let storageDirectory = null;
-        let storageMethod = 'localStorage'; // Por defecto, usamos localStorage
+        let documentsList = []; // Lista de documentos
         
-        // Verificar si la API File System Access está disponible
-        const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
-        
-        if (!isFileSystemAccessSupported) {
-            fileSystemBtn.disabled = true;
-            fileSystemBtn.textContent = 'No disponible en tu navegador';
-        }
+        // Constante para el nombre de la clave en localStorage
+        const DOCUMENTS_LIST_KEY = 'pdf_manager_documents';
         
         // Evento cuando se carga la página
         window.onload = function() {
             console.log("Página cargada");
             
-            // Cargar los documentos guardados
-            loadDocuments();
+            // Cargar la lista de documentos desde localStorage
+            loadDocumentsList();
             
-            // Event Listeners para los botones de almacenamiento
-            localStorageBtn.onclick = function() {
-                setStorageMethod('localStorage');
-            };
-            
-            fileSystemBtn.onclick = function() {
-                if (isFileSystemAccessSupported) {
-                    selectDirectory();
-                } else {
-                    showNotification('Tu navegador no soporta esta función', true);
-                }
-            };
+            // Mostrar los documentos
+            displayDocuments();
             
             // Event Listeners
             selectFileBtn.onclick = function() {
@@ -367,46 +333,31 @@
             };
         };
         
-        // Función para establecer el método de almacenamiento
-        function setStorageMethod(method) {
-            storageMethod = method;
-            
-            if (method === 'localStorage') {
-                localStorageBtn.className = 'success';
-                fileSystemBtn.className = '';
-                showNotification('Usando almacenamiento en el navegador');
-                loadDocuments();
+        // Función para cargar la lista de documentos desde localStorage
+        function loadDocumentsList() {
+            const savedList = localStorage.getItem(DOCUMENTS_LIST_KEY);
+            if (savedList) {
+                try {
+                    documentsList = JSON.parse(savedList);
+                    console.log(`Cargados ${documentsList.length} documentos desde localStorage`);
+                } catch (error) {
+                    console.error('Error al parsear la lista de documentos:', error);
+                    documentsList = [];
+                }
             } else {
-                localStorageBtn.className = '';
-                fileSystemBtn.className = 'success';
-                showNotification('Usando almacenamiento en carpeta del sistema');
-                loadDocuments();
+                console.log('No se encontró ninguna lista de documentos guardada');
+                documentsList = [];
             }
         }
         
-        // Función para seleccionar un directorio (usando File System Access API)
-        async function selectDirectory() {
+        // Función para guardar la lista de documentos en localStorage
+        function saveDocumentsList() {
             try {
-                loader.style.display = 'flex';
-                
-                // Solicitar permiso para acceder a un directorio
-                storageDirectory = await window.showDirectoryPicker({
-                    id: 'documentStorage',
-                    mode: 'readwrite',
-                    startIn: 'documents'
-                });
-                
-                setStorageMethod('fileSystem');
-                showNotification('Carpeta seleccionada correctamente');
-                
-                loader.style.display = 'none';
+                localStorage.setItem(DOCUMENTS_LIST_KEY, JSON.stringify(documentsList));
+                console.log(`Lista de ${documentsList.length} documentos guardada en localStorage`);
             } catch (error) {
-                console.error('Error al seleccionar directorio:', error);
-                loader.style.display = 'none';
-                
-                if (error.name !== 'AbortError') {
-                    showNotification('Error al seleccionar carpeta: ' + error.message, true);
-                }
+                console.error('Error al guardar la lista de documentos:', error);
+                showNotification('Error al guardar la lista de documentos', true);
             }
         }
         
@@ -505,8 +456,8 @@
             closeCamera();
         }
         
-        // Función para guardar el documento
-        async function saveDocument() {
+        // Función para guardar un documento
+        function saveDocument() {
             if (!currentFile) {
                 showNotification('No hay ningún archivo seleccionado', true);
                 return;
@@ -515,179 +466,76 @@
             const name = documentName.value.trim() || `Documento_${new Date().toLocaleDateString()}`;
             loader.style.display = 'flex';
             
-            try {
-                if (storageMethod === 'fileSystem' && storageDirectory) {
-                    // Guardar usando File System Access API
-                    await saveToFileSystem(currentFile, name);
-                } else {
-                    // Guardar usando localStorage
-                    await saveToLocalStorage(currentFile, name);
-                }
+            // Convertir el archivo a Base64
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fileData = e.target.result;
                 
-                // Resetear la interfaz
-                previewContainer.style.display = 'none';
-                imagePreview.src = '';
-                documentName.value = '';
-                currentFile = null;
-                fileInput.value = '';
-                
-                // Recargar la lista de documentos
-                loadDocuments();
-                
-                showNotification('Documento guardado correctamente');
-            } catch (error) {
-                console.error('Error al guardar el documento:', error);
-                showNotification('Error al guardar el documento: ' + error.message, true);
-            } finally {
-                loader.style.display = 'none';
-            }
-        }
-        
-        // Función para guardar en localStorage
-        function saveToLocalStorage(file, name) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    try {
-                        const fileData = e.target.result;
-                        
-                        // Crear el objeto documento
-                        const docId = 'doc_' + Date.now();
-                        const doc = {
-                            id: docId,
-                            name: name,
-                            type: file.type,
-                            size: file.size,
-                            date: new Date().toISOString(),
-                            data: fileData
-                        };
-                        
-                        // Guardar en localStorage
-                        let documents = {};
-                        const storedDocs = localStorage.getItem('documents');
-                        
-                        if (storedDocs) {
-                            documents = JSON.parse(storedDocs);
-                        }
-                        
-                        documents[docId] = doc;
-                        localStorage.setItem('documents', JSON.stringify(documents));
-                        
-                        resolve();
-                    } catch (error) {
-                        reject(error);
-                    }
-                };
-                
-                reader.onerror = function() {
-                    reject(new Error('Error al leer el archivo'));
-                };
-                
-                reader.readAsDataURL(file);
-            });
-        }
-        
-        // Función para guardar en el sistema de archivos
-        async function saveToFileSystem(file, name) {
-            if (!storageDirectory) {
-                throw new Error('No se ha seleccionado ninguna carpeta');
-            }
-            
-            // Determinar la extensión según el tipo de archivo
-            let extension = '.pdf';
-            if (file.type.startsWith('image/')) {
-                extension = file.type === 'image/png' ? '.png' : '.jpg';
-            }
-            
-            // Crear un nombre de archivo seguro
-            const safeFileName = name.replace(/[^a-z0-9]/gi, '_') + extension;
-            
-            // Guardar los metadatos
-            let metadata = {};
-            try {
-                const metadataFile = await storageDirectory.getFileHandle('metadata.json', { create: true });
-                const metadataWriter = await metadataFile.createWritable();
-                
-                // Intentar leer los metadatos existentes
-                try {
-                    const metadataReader = await metadataFile.getFile();
-                    const metadataText = await metadataReader.text();
-                    metadata = JSON.parse(metadataText);
-                } catch (error) {
-                    console.log('No se encontraron metadatos previos, creando nuevos');
-                    metadata = { documents: {} };
-                }
-                
-                // Añadir el nuevo documento a los metadatos
+                // Crear el objeto documento
                 const docId = 'doc_' + Date.now();
-                metadata.documents[docId] = {
+                const doc = {
                     id: docId,
                     name: name,
-                    type: file.type,
-                    size: file.size,
+                    type: currentFile.type,
+                    size: currentFile.size,
                     date: new Date().toISOString(),
-                    fileName: safeFileName
+                    data: fileData
                 };
                 
-                // Escribir los metadatos actualizados
-                await metadataWriter.write(JSON.stringify(metadata));
-                await metadataWriter.close();
+                try {
+                    // Guardar el documento en localStorage
+                    localStorage.setItem(docId, JSON.stringify(doc));
+                    
+                    // Añadir a la lista de documentos
+                    documentsList.push({
+                        id: docId,
+                        name: name,
+                        type: currentFile.type,
+                        size: currentFile.size,
+                        date: new Date().toISOString()
+                    });
+                    
+                    // Guardar la lista actualizada
+                    saveDocumentsList();
+                    
+                    // Mostrar los documentos
+                    displayDocuments();
+                    
+                    // Resetear la interfaz
+                    previewContainer.style.display = 'none';
+                    imagePreview.src = '';
+                    documentName.value = '';
+                    currentFile = null;
+                    fileInput.value = '';
+                    
+                    showNotification('Documento guardado correctamente');
+                } catch (error) {
+                    console.error('Error al guardar el documento:', error);
+                    showNotification('Error al guardar el documento: ' + error.message, true);
+                    
+                    // Si el localStorage está lleno, mostrar un mensaje específico
+                    if (error.name === 'QuotaExceededError') {
+                        showNotification('El almacenamiento está lleno. Elimina algunos documentos antes de guardar uno nuevo.', true);
+                    }
+                }
                 
-                // Guardar el archivo
-                const fileHandle = await storageDirectory.getFileHandle(safeFileName, { create: true });
-                const fileWriter = await fileHandle.createWritable();
-                await fileWriter.write(file);
-                await fileWriter.close();
-                
-                return docId;
-            } catch (error) {
-                console.error('Error al guardar en el sistema de archivos:', error);
-                throw error;
-            }
+                loader.style.display = 'none';
+            };
+            
+            reader.onerror = function() {
+                console.error('Error al leer el archivo');
+                loader.style.display = 'none';
+                showNotification('Error al leer el archivo', true);
+            };
+            
+            reader.readAsDataURL(currentFile);
         }
         
-        // Función para cargar los documentos guardados
-        async function loadDocuments() {
-            console.log("Cargando documentos...");
+        // Función para mostrar los documentos en la interfaz
+        function displayDocuments() {
             documentsContainer.innerHTML = '';
             
-            try {
-                if (storageMethod === 'fileSystem' && storageDirectory) {
-                    // Cargar documentos del sistema de archivos
-                    await loadFromFileSystem();
-                } else {
-                    // Cargar documentos de localStorage
-                    loadFromLocalStorage();
-                }
-            } catch (error) {
-                console.error('Error al cargar documentos:', error);
-                documentsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <h3>Error al cargar documentos</h3>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-        
-        // Función para cargar documentos de localStorage
-        function loadFromLocalStorage() {
-            let documents = {};
-            try {
-                const storedDocs = localStorage.getItem('documents');
-                if (storedDocs) {
-                    documents = JSON.parse(storedDocs);
-                }
-            } catch (e) {
-                console.error('Error al parsear documentos:', e);
-                documentsContainer.innerHTML = '<div class="empty-state"><p>Error al cargar documentos</p></div>';
-                return;
-            }
-            
-            const docIds = Object.keys(documents);
-            
-            if (docIds.length === 0) {
+            if (documentsList.length === 0) {
                 documentsContainer.innerHTML = `
                     <div class="empty-state">
                         <h3>No hay documentos</h3>
@@ -698,320 +546,122 @@
             }
             
             // Ordenar por fecha (más reciente primero)
-            docIds.sort(function(a, b) {
-                return new Date(documents[b].date) - new Date(documents[a].date);
-            });
+            documentsList.sort((a, b) => new Date(b.date) - new Date(a.date));
             
             // Crear elementos para cada documento
-            docIds.forEach(function(id) {
-                const doc = documents[id];
-                addDocumentToUI(doc, 'localStorage');
-            });
-            
-            console.log(`Se cargaron ${docIds.length} documentos de localStorage`);
-        }
-        
-        // Función para cargar documentos del sistema de archivos
-        async function loadFromFileSystem() {
-            if (!storageDirectory) {
-                documentsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <h3>Carpeta no seleccionada</h3>
-                        <p>Selecciona una carpeta para almacenar tus documentos.</p>
+            documentsList.forEach(function(doc) {
+                const docItem = document.createElement('div');
+                docItem.className = 'document-item';
+                
+                const date = new Date(doc.date);
+                const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
+                const formattedSize = formatFileSize(doc.size);
+                
+                docItem.innerHTML = `
+                    <div class="document-title">${doc.name}</div>
+                    <div class="document-meta">
+                        Fecha: ${formattedDate} | Tamaño: ${formattedSize}
+                    </div>
+                    <div class="document-actions">
+                        <button onclick="viewDocument('${doc.id}')">Ver</button>
+                        <button class="success" onclick="downloadDocument('${doc.id}')">Descargar</button>
+                        <button class="danger" onclick="deleteDocument('${doc.id}')">Eliminar</button>
                     </div>
                 `;
-                return;
-            }
-            
-            try {
-                // Intentar leer el archivo de metadatos
-                let metadata = { documents: {} };
-                try {
-                    const metadataFile = await storageDirectory.getFileHandle('metadata.json');
-                    const metadataReader = await metadataFile.getFile();
-                    const metadataText = await metadataReader.text();
-                    metadata = JSON.parse(metadataText);
-                } catch (error) {
-                    console.log('No se encontraron metadatos');
-                }
                 
-                const documents = metadata.documents || {};
-                const docIds = Object.keys(documents);
-                
-                if (docIds.length === 0) {
-                    documentsContainer.innerHTML = `
-                        <div class="empty-state">
-                            <h3>No hay documentos</h3>
-                            <p>Sube una imagen o archivo PDF para empezar.</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                // Ordenar por fecha (más reciente primero)
-                docIds.sort(function(a, b) {
-                    return new Date(documents[b].date) - new Date(documents[a].date);
-                });
-                
-                // Crear elementos para cada documento
-                docIds.forEach(function(id) {
-                    const doc = documents[id];
-                    addDocumentToUI(doc, 'fileSystem');
-                });
-                
-                console.log(`Se cargaron ${docIds.length} documentos del sistema de archivos`);
-            } catch (error) {
-                console.error('Error al cargar documentos del sistema de archivos:', error);
-                throw error;
-            }
-        }
-        
-        // Función para añadir un documento a la interfaz
-        function addDocumentToUI(doc, source) {
-            const docItem = document.createElement('div');
-            docItem.className = 'document-item';
-            
-            const date = new Date(doc.date);
-            const formattedDate = `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}`;
-            const formattedSize = formatFileSize(doc.size);
-            
-            docItem.innerHTML = `
-                <div class="document-title">${doc.name}</div>
-                <div class="document-meta">
-                    Fecha: ${formattedDate} | Tamaño: ${formattedSize}
-                </div>
-                <div class="document-actions">
-                    <button onclick="viewDocument('${doc.id}', '${source}')">Ver</button>
-                    <button class="success" onclick="downloadDocument('${doc.id}', '${source}')">Descargar</button>
-                    <button class="danger" onclick="deleteDocument('${doc.id}', '${source}')">Eliminar</button>
-                </div>
-            `;
-            
-            documentsContainer.appendChild(docItem);
+                documentsContainer.appendChild(docItem);
+            });
         }
         
         // Función para ver un documento
-        async function viewDocument(docId, source) {
+        function viewDocument(docId) {
+            loader.style.display = 'flex';
+            
             try {
-                loader.style.display = 'flex';
-                
-                if (source === 'fileSystem') {
-                    // Cargar desde el sistema de archivos
-                    await viewFromFileSystem(docId);
-                } else {
-                    // Cargar desde localStorage
-                    viewFromLocalStorage(docId);
+                // Obtener el documento del localStorage
+                const docString = localStorage.getItem(docId);
+                if (!docString) {
+                    throw new Error('No se encontró el documento');
                 }
                 
-                loader.style.display = 'none';
+                const doc = JSON.parse(docString);
+                
+                // Mostrar en el visor
+                pdfFrame.src = doc.data;
+                pdfViewer.style.display = 'block';
             } catch (error) {
                 console.error('Error al ver el documento:', error);
-                loader.style.display = 'none';
                 showNotification('Error al ver el documento: ' + error.message, true);
             }
-        }
-        
-        // Función para ver un documento desde localStorage
-        function viewFromLocalStorage(docId) {
-            const documents = JSON.parse(localStorage.getItem('documents')) || {};
-            const doc = documents[docId];
             
-            if (!doc) {
-                throw new Error('No se encontró el documento');
-            }
-            
-            pdfFrame.src = doc.data;
-            pdfViewer.style.display = 'block';
-        }
-        
-        // Función para ver un documento desde el sistema de archivos
-        async function viewFromFileSystem(docId) {
-            if (!storageDirectory) {
-                throw new Error('No se ha seleccionado ninguna carpeta');
-            }
-            
-            // Leer los metadatos
-            const metadataFile = await storageDirectory.getFileHandle('metadata.json');
-            const metadataReader = await metadataFile.getFile();
-            const metadataText = await metadataReader.text();
-            const metadata = JSON.parse(metadataText);
-            
-            const doc = metadata.documents[docId];
-            if (!doc) {
-                throw new Error('No se encontró el documento');
-            }
-            
-            // Obtener el archivo
-            const fileHandle = await storageDirectory.getFileHandle(doc.fileName);
-            const file = await fileHandle.getFile();
-            
-            // Crear una URL para el archivo
-            const url = URL.createObjectURL(file);
-            
-            // Mostrar en el visor
-            pdfFrame.src = url;
-            pdfViewer.style.display = 'block';
-            
-            // Limpiar la URL cuando se cierre el visor
-            closePdfViewer.addEventListener('click', function() {
-                URL.revokeObjectURL(url);
-            }, { once: true });
+            loader.style.display = 'none';
         }
         
         // Función para descargar un documento
-        async function downloadDocument(docId, source) {
+        function downloadDocument(docId) {
+            loader.style.display = 'flex';
+            
             try {
-                loader.style.display = 'flex';
-                
-                if (source === 'fileSystem') {
-                    // Descargar desde el sistema de archivos
-                    await downloadFromFileSystem(docId);
-                } else {
-                    // Descargar desde localStorage
-                    downloadFromLocalStorage(docId);
+                // Obtener el documento del localStorage
+                const docString = localStorage.getItem(docId);
+                if (!docString) {
+                    throw new Error('No se encontró el documento');
                 }
                 
-                loader.style.display = 'none';
+                const doc = JSON.parse(docString);
+                
+                // Determinar la extensión según el tipo
+                const extension = doc.type === 'application/pdf' ? '.pdf' : 
+                                doc.type === 'image/png' ? '.png' : '.jpg';
+                
+                // Crear un enlace para la descarga
+                const a = document.createElement('a');
+                a.href = doc.data;
+                a.download = doc.name + extension;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             } catch (error) {
                 console.error('Error al descargar el documento:', error);
-                loader.style.display = 'none';
                 showNotification('Error al descargar el documento: ' + error.message, true);
             }
-        }
-        
-        // Función para descargar un documento desde localStorage
-        function downloadFromLocalStorage(docId) {
-            const documents = JSON.parse(localStorage.getItem('documents')) || {};
-            const doc = documents[docId];
             
-            if (!doc) {
-                throw new Error('No se encontró el documento');
-            }
-            
-            const extension = doc.type === 'application/pdf' ? '.pdf' : 
-                            doc.type === 'image/png' ? '.png' : '.jpg';
-            
-            const a = document.createElement('a');
-            a.href = doc.data;
-            a.download = doc.name + extension;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-        
-        // Función para descargar un documento desde el sistema de archivos
-        async function downloadFromFileSystem(docId) {
-            if (!storageDirectory) {
-                throw new Error('No se ha seleccionado ninguna carpeta');
-            }
-            
-            // Leer los metadatos
-            const metadataFile = await storageDirectory.getFileHandle('metadata.json');
-            const metadataReader = await metadataFile.getFile();
-            const metadataText = await metadataReader.text();
-            const metadata = JSON.parse(metadataText);
-            
-            const doc = metadata.documents[docId];
-            if (!doc) {
-                throw new Error('No se encontró el documento');
-            }
-            
-            // Obtener el archivo
-            const fileHandle = await storageDirectory.getFileHandle(doc.fileName);
-            const file = await fileHandle.getFile();
-            
-            // Crear una URL para el archivo
-            const url = URL.createObjectURL(file);
-            
-            // Descargar el archivo
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = doc.name + (doc.fileName.includes('.pdf') ? '.pdf' : 
-                        doc.fileName.includes('.png') ? '.png' : '.jpg');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            // Limpiar la URL
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            }, 100);
+            loader.style.display = 'none';
         }
         
         // Función para eliminar un documento
-        async function deleteDocument(docId, source) {
+        function deleteDocument(docId) {
             if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
                 return;
             }
             
+            loader.style.display = 'flex';
+            
             try {
-                loader.style.display = 'flex';
+                // Eliminar del localStorage
+                localStorage.removeItem(docId);
                 
-                if (source === 'fileSystem') {
-                    // Eliminar desde el sistema de archivos
-                    await deleteFromFileSystem(docId);
+                // Eliminar de la lista de documentos
+                const index = documentsList.findIndex(doc => doc.id === docId);
+                if (index !== -1) {
+                    documentsList.splice(index, 1);
+                    
+                    // Guardar la lista actualizada
+                    saveDocumentsList();
+                    
+                    // Actualizar la interfaz
+                    displayDocuments();
+                    
+                    showNotification('Documento eliminado correctamente');
                 } else {
-                    // Eliminar desde localStorage
-                    deleteFromLocalStorage(docId);
+                    throw new Error('No se encontró el documento en la lista');
                 }
-                
-                // Recargar los documentos
-                loadDocuments();
-                
-                loader.style.display = 'none';
-                showNotification('Documento eliminado correctamente');
             } catch (error) {
                 console.error('Error al eliminar el documento:', error);
-                loader.style.display = 'none';
                 showNotification('Error al eliminar el documento: ' + error.message, true);
             }
-        }
-        
-        // Función para eliminar un documento desde localStorage
-        function deleteFromLocalStorage(docId) {
-            const documents = JSON.parse(localStorage.getItem('documents')) || {};
             
-            if (!documents[docId]) {
-                throw new Error('No se encontró el documento');
-            }
-            
-            delete documents[docId];
-            localStorage.setItem('documents', JSON.stringify(documents));
-        }
-        
-        // Función para eliminar un documento desde el sistema de archivos
-        async function deleteFromFileSystem(docId) {
-            if (!storageDirectory) {
-                throw new Error('No se ha seleccionado ninguna carpeta');
-            }
-            
-            // Leer los metadatos
-            const metadataFile = await storageDirectory.getFileHandle('metadata.json');
-            const metadataReader = await metadataFile.getFile();
-            const metadataText = await metadataReader.text();
-            const metadata = JSON.parse(metadataText);
-            
-            const doc = metadata.documents[docId];
-            if (!doc) {
-                throw new Error('No se encontró el documento');
-            }
-            
-            // Eliminar el archivo
-            try {
-                await storageDirectory.removeEntry(doc.fileName);
-            } catch (error) {
-                console.error('Error al eliminar el archivo:', error);
-                // Continuamos aunque no se pueda eliminar el archivo
-            }
-            
-            // Actualizar los metadatos
-            delete metadata.documents[docId];
-            
-            // Guardar los metadatos actualizados
-            const metadataWriter = await metadataFile.createWritable();
-            await metadataWriter.write(JSON.stringify(metadata));
-            await metadataWriter.close();
+            loader.style.display = 'none';
         }
         
         // Función para formatear el tamaño de archivo
